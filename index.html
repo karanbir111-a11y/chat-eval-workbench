@@ -1,0 +1,1004 @@
+<title>Chat Eval Workbench</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: fixed step rail on the left, one working pane on the right; stacks to a scrollable step strip on phones. */
+:root{
+  --bg:#f1f3f5; --surface:#ffffff; --surface-2:#f7f8fa;
+  --ink:#15181d; --muted:#5b636e; --line:#d7dbe0;
+  --accent:#1f5f8b; --accent-soft:#e3edf4;
+  --ok:#2f7d55; --warn:#a9650d; --bad:#a32c2c;
+  --ok-soft:#e4f1ea; --warn-soft:#f7eeda; --bad-soft:#f7e4e4;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --cond:"IBM Plex Sans Condensed","IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131619; --surface:#1b1f24; --surface-2:#22262c;
+  --ink:#e9ebee; --muted:#99a1ab; --line:#2d333b;
+  --accent:#6fa8d1; --accent-soft:#1d2a35;
+  --ok:#62b78b; --warn:#d9a44a; --bad:#dd8080;
+  --ok-soft:#18271f; --warn-soft:#2a2316; --bad-soft:#2b1c1c;
+  color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#131619; --surface:#1b1f24; --surface-2:#22262c;
+  --ink:#e9ebee; --muted:#99a1ab; --line:#2d333b;
+  --accent:#6fa8d1; --accent-soft:#1d2a35;
+  --ok:#62b78b; --warn:#d9a44a; --bad:#dd8080;
+  --ok-soft:#18271f; --warn-soft:#2a2316; --bad-soft:#2b1c1c;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5}
+*{box-sizing:border-box}
+h1,h2,h3{font-family:var(--cond);margin:0;text-wrap:balance;letter-spacing:.01em}
+h1{font-size:19px;font-weight:700}
+h2{font-size:17px;font-weight:700}
+h3{font-size:14px;font-weight:600}
+p{margin:0}
+.lbl{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button{font:inherit;cursor:pointer}
+.btn{font-family:var(--sans);font-size:13px;font-weight:500;padding:7px 12px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.pri:hover{filter:brightness(1.08)}
+.btn.ok{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.btn.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn.sm{padding:4px 9px;font-size:12px}
+input[type=text],input[type=number],select,textarea{font:inherit;font-size:13px;padding:7px 9px;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);width:100%}
+textarea{font-family:var(--mono);font-size:12.5px;line-height:1.55;resize:vertical}
+.shell{display:flex;min-height:100%;align-items:stretch}
+.rail{width:206px;flex:0 0 206px;border-right:1px solid var(--line);background:var(--surface);padding:18px 0 24px;position:sticky;top:env(safe-area-inset-top,0px);align-self:flex-start;max-height:100vh;overflow:auto}
+.rail .brand{padding:0 18px 16px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.rail .brand p{color:var(--muted);font-size:12px;margin-top:3px}
+.steps{display:flex;flex-direction:column;gap:2px;padding:0 8px}
+.step{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;border:0;background:none;color:var(--ink);padding:9px 10px;border-radius:var(--r);font-size:13px}
+.step:hover{background:var(--surface-2)}
+.step[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.step .n{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.step[aria-current="true"] .n{color:var(--accent)}
+.step .tag{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted)}
+main{flex:1;min-width:0;padding-block:22px 48px;padding-left:28px;padding-right:28px;max-width:1120px}
+.head{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:4px}
+.head .sub{color:var(--muted);font-size:13px;max-width:62ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.stack{display:flex;flex-direction:column;gap:16px;margin-top:18px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.drop{border:1.5px dashed var(--line);border-radius:var(--r);padding:28px 18px;text-align:center;background:var(--surface-2)}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.kv{display:flex;flex-direction:column;gap:3px}
+.kv .v{font-family:var(--mono);font-size:19px;font-variant-numeric:tabular-nums}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface-2)}
+.pill.ok{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.bad{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+.pill.warn{color:var(--warn);border-color:var(--warn);background:var(--warn-soft)}
+.qa{display:grid;gap:12px}
+.qa .q{font-size:15px;font-weight:500}
+.qa .a{white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r);padding:12px;max-height:46vh;overflow:auto;font-size:13px}
+.meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12px}
+.meta .dot{opacity:.5}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.bar{height:7px;border-radius:999px;background:var(--accent);min-width:3px}
+.bartrack{background:var(--surface-2);border-radius:999px;height:7px;width:100%;border:1px solid var(--line)}
+.scroll{overflow-x:auto}
+.note{font-size:12.5px;color:var(--muted)}
+.banner{border:1px solid var(--warn);background:var(--warn-soft);color:var(--warn);border-radius:var(--r);padding:10px 12px;font-size:12.5px}
+.matrix{display:grid;grid-template-columns:auto 1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;max-width:420px}
+.matrix>div{background:var(--surface);padding:10px 12px}
+.matrix .hd{background:var(--surface-2);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.matrix .big{font-family:var(--mono);font-size:19px;font-variant-numeric:tabular-nums}
+.catchip{display:inline-flex;gap:6px;align-items:center;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12.5px}
+.catchip[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent);font-weight:600}
+.empty{text-align:center;padding:38px 16px;color:var(--muted)}
+.empty h2{color:var(--ink);margin-bottom:8px}
+.kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:1px 5px;background:var(--surface-2);color:var(--muted)}
+.list{display:flex;flex-direction:column;gap:10px}
+.disagree{border-left:3px solid var(--warn);padding-left:12px}
+@media (max-width:760px){
+  .shell{flex-direction:column}
+  .rail{width:auto;flex:none;position:static;max-height:none;border-right:0;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .steps{flex-direction:row;overflow-x:auto;padding:0 12px 4px}
+  .step{white-space:nowrap}
+  .step .tag{display:none}
+  main{padding-left:16px;padding-right:16px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="shell">
+  <nav class="rail">
+    <div class="brand">
+      <h1>Eval Workbench</h1>
+      <p>Find, rank and measure AI chat failures</p>
+    </div>
+    <div class="steps" id="steps"></div>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $ = function(s,r){return (r||document).querySelector(s)};
+var el = function(tag,props,kids){
+  var n = document.createElement(tag);
+  if(props) for(var k in props){
+    if(k==="class") n.className = props[k];
+    else if(k==="text") n.textContent = props[k];
+    else if(k==="html") n.innerHTML = props[k];
+    else if(k.slice(0,2)==="on") n.addEventListener(k.slice(2), props[k]);
+    else if(k==="value"){
+      var v = props[k]==null ? "" : String(props[k]);
+      if(tag==="textarea") n.appendChild(document.createTextNode(v));
+      n.value = v;
+    }
+    else if(props[k]!==null && props[k]!==undefined && props[k]!==false) n.setAttribute(k, props[k]===true?"":props[k]);
+  }
+  (kids||[]).forEach(function(c){ if(c) n.appendChild(typeof c==="string"?document.createTextNode(c):c) });
+  return n;
+};
+var esc = function(s){ return String(s==null?"":s) };
+
+/* ---------- state ---------- */
+var S = {
+  view:"import", db:null, sample:null, dl:null, dbNote:"",
+  traces:[], cats:[], judges:{},
+  idx:0, filter:"unreviewed",
+  staged:null, map:{}, exclude:"hrs.com, hrs.de, clay.global, blinkux.com, fractal.ai, adesso.de",
+  sampleSize:50, busy:"", judgeCat:null, judgeRun:null, abort:null, suggestions:null
+};
+var STEPS = [
+  {id:"import", n:"1", label:"Import"},
+  {id:"review", n:"2", label:"Review"},
+  {id:"categorize", n:"3", label:"Categorize"},
+  {id:"judge", n:"4", label:"Judge"},
+  {id:"export", n:"5", label:"Handover"}
+];
+
+/* ---------- csv ---------- */
+function parseDelimited(text){
+  var d = (text.split("\n")[0].split("\t").length > text.split("\n")[0].split(",").length) ? "\t" : ",";
+  var rows=[], row=[], cur="", q=false, i=0;
+  text = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  while(i < text.length){
+    var c = text[i];
+    if(q){
+      if(c === '"'){ if(text[i+1] === '"'){ cur+='"'; i+=2; continue } q=false; i++; continue }
+      cur+=c; i++; continue;
+    }
+    if(c === '"'){ q=true; i++; continue }
+    if(c === d){ row.push(cur); cur=""; i++; continue }
+    if(c === "\n"){ row.push(cur); rows.push(row); row=[]; cur=""; i++; continue }
+    cur+=c; i++;
+  }
+  if(cur.length || row.length){ row.push(cur); rows.push(row) }
+  return rows.filter(function(r){ return r.length>1 || (r[0]||"").trim()!=="" });
+}
+function guess(headers, names){
+  for(var i=0;i<names.length;i++){
+    for(var j=0;j<headers.length;j++){
+      if(headers[j].toLowerCase().replace(/[^a-z]/g,"") === names[i]) return j;
+    }
+  }
+  for(var a=0;a<names.length;a++) for(var b=0;b<headers.length;b++){
+    if(headers[b].toLowerCase().indexOf(names[a])>=0) return b;
+  }
+  return -1;
+}
+function stageRows(rows, filename){
+  var headers = rows[0].map(function(h){ return h.trim() });
+  S.staged = { headers:headers, rows:rows.slice(1), file:filename };
+  S.map = {
+    question: guess(headers,["content","question","prompt","usermessage","query"]),
+    answer:   guess(headers,["answer","response","reply","output"]),
+    user:     guess(headers,["userid","user","email","author"]),
+    account:  guess(headers,["kkey","account","customer","company","client"]),
+    session:  guess(headers,["sessionid","session","conversationid","thread"]),
+    ts:       guess(headers,["timestamp","time","date","createdat"]),
+    id:       guess(headers,["messageid","id","traceid"])
+  };
+  render();
+}
+function buildTraces(){
+  var m = S.map, rows = S.staged.rows;
+  var bad = S.exclude.split(",").map(function(s){ return s.trim().toLowerCase() }).filter(Boolean);
+  var seen = {}, out = [];
+  rows.forEach(function(r, i){
+    var ans = m.answer>=0 ? (r[m.answer]||"").trim() : "";
+    var q = m.question>=0 ? (r[m.question]||"").trim() : "";
+    if(!q) return;
+    if(!ans || ans.toLowerCase()==="nan" || ans==="{}") return;
+    var user = m.user>=0 ? (r[m.user]||"").trim() : "";
+    var dom = user.indexOf("@")>=0 ? user.split("@")[1].toLowerCase() : "";
+    if(dom && bad.indexOf(dom)>=0) return;
+    var key = m.id>=0 && r[m.id] ? r[m.id] : (q+"||"+ans).slice(0,400);
+    if(seen[key]) return;
+    seen[key] = 1;
+    ans = ans.replace(/^"+|"+$/g,"").replace(/\\n/g,"\n").replace(/""/g,'"');
+    var ts = m.ts>=0 ? (r[m.ts]||"") : "";
+    var when = "";
+    if(/^\d{10,}$/.test(ts)){ var n2 = Number(ts); when = new Date(n2 < 1e12 ? n2*1000 : n2).toISOString().slice(0,10) }
+    else if(ts) when = ts.slice(0,10);
+    out.push({
+      id: "t" + Math.abs(hash(key)).toString(36) + i.toString(36),
+      q:q, a:ans, user:user, account: m.account>=0 ? (r[m.account]||"").trim() : "",
+      session: m.session>=0 ? (r[m.session]||"").trim().slice(-6) : "", when:when,
+      verdict:"", note:"", cats:{}
+    });
+  });
+  return out;
+}
+function hash(s){ var h=0; for(var i=0;i<s.length;i++){ h=(h<<5)-h+s.charCodeAt(i); h|=0 } return h }
+function shuffle(a, seed){
+  var r = seed||12345, out = a.slice();
+  for(var i=out.length-1;i>0;i--){
+    r = (r*1664525 + 1013904223) % 4294967296;
+    var j = r % (i+1), t = out[i]; out[i]=out[j]; out[j]=t;
+  }
+  return out;
+}
+
+/* ---------- storage ---------- */
+var KEY = "evalworkbench.v1", saveTimer = null;
+function persist(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({ traces:S.traces, cats:S.cats, judges:S.judges }));
+    }catch(e){ S.dbNote = "This browser is not storing your work (private window or storage blocked). Download the pack before you close the tab." }
+  }, 250);
+  return Promise.resolve();
+}
+function restore(){
+  try{
+    var raw = localStorage.getItem(KEY); if(!raw) return false;
+    var v = JSON.parse(raw);
+    S.traces = Array.isArray(v.traces) ? v.traces : [];
+    S.cats = Array.isArray(v.cats) ? v.cats : [];
+    S.judges = v.judges || {};
+    return true;
+  }catch(e){ return false }
+}
+function saveTrace(){ return persist() }
+function saveCats(){ return persist() }
+function saveJudge(){ return persist() }
+function wipe(){
+  S.traces = []; S.cats = []; S.judges = {}; S.judgeRun = null; S.suggestions = null;
+  try{ localStorage.removeItem(KEY) }catch(e){}
+  render();
+}
+var EX_ACCT = "Lumen Store (example)", EX_USER = "example@lumenstore.test";
+var EXAMPLES = [
+  { q:"These figures do not match my dashboard. Where did you get them?",
+    a:"I understand your concern about data accuracy. I have not provided any specific data yet in our conversation, so I would like to clarify what you are referring to.\n\nCould you tell me which figures you are questioning? Once you share them I can look into where they came from.",
+    when:"2026-09-02" },
+  { q:"What was our total refund amount last year?",
+    a:"Here is your refund data for last year.\n\nSummary (across 200 records)\n- Total refunds: EUR 812,400\n- Orders refunded: 6,940\n- Average refund: EUR 117\n\nRefunds peaked in November and December, which is consistent with the holiday returns window.",
+    when:"2026-09-02" },
+  { q:"What is our average order value by city?",
+    a:"Average order value by city:\n\n1. Berlin - EUR 62.40 across 18,200 orders\n2. Hamburg - EUR 58.10 across 9,450 orders\n3. Cologne - EUR 55.30 across 7,110 orders\n\nTotal average order value: EUR 175.80.\n\nBerlin leads on both volume and basket size.",
+    when:"2026-09-03" },
+  { q:"How many orders did we ship to Lyon last quarter?",
+    a:"I could not find any order data for Lyon. This could mean there were no orders to that city in the period, or that the data is not available in the system.\n\nWould you like me to check a different city or a longer period?",
+    when:"2026-09-03" },
+  { q:"Where can we cut shipping costs?",
+    a:"Your top 20 shipping lanes account for EUR 164,000 in annual cost across 42,500 parcels.\n\nApplying a typical 15% carrier discount, that points to roughly EUR 24,600 in savings.\n\nStart with Berlin to Munich, your highest volume lane.",
+    when:"2026-09-03" }
+];
+function loadExamples(){
+  EXAMPLES.forEach(function(e,i){
+    if(S.traces.some(function(t){ return t.id === "ex"+i })) return;
+    S.traces.push({ id:"ex"+i, q:e.q, a:e.a, user:EX_USER, account:EX_ACCT, session:"", when:e.when, verdict:"", note:"", cats:{} });
+  });
+  persist(); S.view = "review"; S.idx = 0; render();
+}
+function queue(items, worker, concurrency, onTick){
+  var i=0, active=0, done=0;
+  return new Promise(function(res){
+    function next(){
+      if(done === items.length) return res();
+      while(active < concurrency && i < items.length){
+        (function(it){
+          active++;
+          Promise.resolve(worker(it)).catch(function(){}).then(function(){
+            active--; done++; if(onTick) onTick(done, items.length); next();
+          });
+        })(items[i++]);
+      }
+    }
+    if(!items.length) return res();
+    next();
+  });
+}
+
+/* ---------- derived ---------- */
+function reviewed(){ return S.traces.filter(function(t){ return t.verdict }) }
+function problems(){ return S.traces.filter(function(t){ return t.verdict === "bad" }) }
+function catCount(id){ return S.traces.filter(function(t){ return t.cats && t.cats[id] }).length }
+function visible(){
+  if(S.filter === "all") return S.traces;
+  if(S.filter === "problems") return problems();
+  if(S.filter === "unassigned") return problems().filter(function(t){ return !Object.keys(t.cats||{}).length });
+  return S.traces.filter(function(t){ return !t.verdict });
+}
+
+/* ---------- render ---------- */
+function render(){
+  var steps = $("#steps");
+  steps.innerHTML = "";
+  STEPS.forEach(function(s){
+    var tag = s.id==="review" ? reviewed().length + "/" + S.traces.length
+      : s.id==="categorize" ? (S.cats.length ? S.cats.length + " cats" : "")
+      : s.id==="import" ? (S.traces.length ? S.traces.length : "")
+      : s.id==="judge" ? (Object.keys(S.judges).length || "")
+      : "";
+    steps.appendChild(el("button",{class:"step","aria-current": S.view===s.id, onclick:function(){ S.view=s.id; render(); window.scrollTo(0,0) }},[
+      el("span",{class:"n",text:s.n}), el("span",{text:s.label}), el("span",{class:"tag",text:String(tag||"")})
+    ]));
+  });
+  var m = $("#main"); m.innerHTML = "";
+  if(S.dbNote) m.appendChild(el("div",{class:"banner",text:S.dbNote}));
+  ({import:viewImport, review:viewReview, categorize:viewCats, judge:viewJudge, export:viewExport})[S.view](m);
+}
+
+function headerBlock(title, sub){
+  return el("div",{class:"head"},[ el("div",{},[ el("h2",{text:title}), el("p",{class:"sub",text:sub}) ]) ]);
+}
+
+/* ---- 1. import ---- */
+function viewImport(m){
+  m.appendChild(headerBlock("Import a chat export",
+    "Drop an export of your AI assistant's conversations. Rows without an answer are dropped, duplicates are removed, and any domains you list are filtered out."));
+  var wrap = el("div",{class:"stack"}); m.appendChild(wrap);
+  wrap.appendChild(el("div",{class:"card"},[
+    el("h3",{text:"Your data stays in your browser"}),
+    el("p",{class:"note",style:"margin-top:6px",text:"Nothing you import or label is uploaded. It is held in this browser's local storage, on this device only, and nobody else can see it. Clearing your browser data removes it, so download the pack when you are done."})
+  ]));
+
+  if(!S.staged){
+    var drop = el("div",{class:"drop"},[
+      el("p",{text:"Drop a CSV or TSV file here"}),
+      el("p",{class:"note",style:"margin-top:6px",text:"In Excel: File, Save As, CSV UTF-8. Or paste the text below."}),
+      el("div",{class:"row",style:"margin-top:14px;justify-content:center"},[
+        el("label",{class:"btn pri",for:"fileIn",style:"display:inline-block"},["Choose file"]),
+        el("button",{class:"btn",onclick:loadExamples},["Try it with 5 example answers"])
+      ])
+    ]);
+    var fin = el("input",{type:"file",id:"fileIn",accept:".csv,.tsv,.txt",style:"position:absolute;width:1px;height:1px;opacity:0",
+      onchange:function(e){ var f=e.target.files[0]; if(!f) return; f.text().then(function(tx){ stageRows(parseDelimited(tx), f.name) }) }});
+    drop.appendChild(fin);
+    ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over") }) });
+    ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over") }) });
+    drop.addEventListener("drop", function(e){
+      var f = e.dataTransfer.files[0]; if(!f) return;
+      f.text().then(function(tx){ stageRows(parseDelimited(tx), f.name) });
+    });
+    wrap.appendChild(drop);
+
+    var ta = el("textarea",{rows:"5",id:"pasteBox",placeholder:"...or paste the export text here"});
+    wrap.appendChild(el("div",{class:"card"},[
+      el("div",{class:"lbl",style:"margin-bottom:8px",text:"Paste instead"}), ta,
+      el("div",{class:"row",style:"margin-top:10px"},[
+        el("button",{class:"btn",onclick:function(){ var v=ta.value.trim(); if(v) stageRows(parseDelimited(v),"pasted") }},["Read pasted text"])
+      ])
+    ]));
+
+    if(S.traces.length){
+      wrap.appendChild(el("div",{class:"card"},[
+        el("h3",{text:"Already loaded"}),
+        el("p",{class:"note",style:"margin-top:6px",text:S.traces.length+" traces in this workbench, "+reviewed().length+" reviewed."}),
+        el("div",{class:"row",style:"margin-top:10px"},[
+          el("button",{class:"btn pri",onclick:function(){ S.view="review"; render() }},["Continue reviewing"]),
+          el("button",{class:"btn",onclick:function(){
+            if(!confirmInline(this,"Clear all traces and labels?")) return;
+            wipe();
+          }},["Clear everything"])
+        ])
+      ]));
+    }
+    return;
+  }
+
+  var st = S.staged;
+  var fields = [["question","User question"],["answer","Assistant answer"],["user","User / email"],["account","Account"],["session","Session"],["ts","Timestamp"],["id","Row id"]];
+  var mapCard = el("div",{class:"card"},[
+    el("h3",{text:"Columns"}),
+    el("p",{class:"note",style:"margin:6px 0 12px",text:st.file+", "+st.rows.length+" rows. Check the mapping before loading."})
+  ]);
+  var g = el("div",{class:"grid2"});
+  fields.forEach(function(f){
+    var sel = el("select",{onchange:function(e){ S.map[f[0]] = Number(e.target.value); }});
+    sel.appendChild(el("option",{value:"-1",text:"(none)"}));
+    st.headers.forEach(function(h,i){
+      var o = el("option",{value:String(i),text:h || ("column "+(i+1))});
+      if(S.map[f[0]] === i) o.selected = true;
+      sel.appendChild(o);
+    });
+    g.appendChild(el("div",{class:"kv"},[ el("span",{class:"lbl",text:f[1]}), sel ]));
+  });
+  mapCard.appendChild(g);
+  wrap.appendChild(mapCard);
+
+  var exIn = el("input",{type:"text",value:S.exclude,onchange:function(e){ S.exclude = e.target.value }});
+  var sizeIn = el("input",{type:"number",min:"5",max:"300",value:String(S.sampleSize),onchange:function(e){ S.sampleSize = Math.max(5, Math.min(300, Number(e.target.value)||50)) }});
+  wrap.appendChild(el("div",{class:"card"},[
+    el("h3",{text:"Filters"}),
+    el("div",{class:"grid2",style:"margin-top:12px"},[
+      el("div",{class:"kv"},[ el("span",{class:"lbl",text:"Exclude these domains"}), exIn ]),
+      el("div",{class:"kv"},[ el("span",{class:"lbl",text:"How many to review"}), sizeIn ])
+    ]),
+    el("p",{class:"note",style:"margin-top:10px",text:"A random sample keeps the batch honest. Review 30 before you look at any categories."})
+  ]));
+
+  var preview = el("div",{class:"card"},[]);
+  var built = buildTraces();
+  preview.appendChild(el("h3",{text:"Preview"}));
+  preview.appendChild(el("div",{class:"grid2",style:"margin-top:12px"},[
+    stat("Rows in file", st.rows.length), stat("Usable traces", built.length),
+    stat("Accounts", uniq(built.map(function(t){return t.account})).length),
+    stat("People", uniq(built.map(function(t){return t.user})).length)
+  ]));
+  if(built[0]) preview.appendChild(el("p",{class:"note",style:"margin-top:12px",text:"First trace: "+built[0].q.slice(0,120)}));
+  wrap.appendChild(preview);
+
+  wrap.appendChild(el("div",{class:"row"},[
+    el("button",{class:"btn pri",onclick:function(){
+      var picked = shuffle(built, 7).slice(0, S.sampleSize);
+      var have = {}; S.traces.forEach(function(t){ have[t.id]=1 });
+      var fresh = picked.filter(function(t){ return !have[t.id] });
+      S.traces = S.traces.concat(fresh);
+      S.staged = null; S.view = "review"; S.idx = 0; render();
+      persist();
+    }},["Load "+Math.min(S.sampleSize, built.length)+" traces"]),
+    el("button",{class:"btn",onclick:function(){ S.staged=null; render() }},["Cancel"])
+  ]));
+}
+function stat(k,v){ return el("div",{class:"kv"},[ el("span",{class:"lbl",text:k}), el("span",{class:"v",text:String(v)}) ]) }
+function uniq(a){ var o={}; a.forEach(function(x){ if(x) o[x]=1 }); return Object.keys(o) }
+function confirmInline(btn, msg){
+  if(btn.dataset.armed === "1") return true;
+  btn.dataset.armed = "1"; var old = btn.textContent; btn.textContent = msg + " Click again.";
+  setTimeout(function(){ btn.dataset.armed=""; btn.textContent = old }, 4000);
+  return false;
+}
+
+/* ---- 2. review ---- */
+function viewReview(m){
+  if(!S.traces.length){
+    m.appendChild(el("div",{class:"empty"},[
+      el("h2",{text:"No conversations yet"}),
+      el("p",{text:"Import an export of your assistant's chats, or try it with five example answers that each hide a different failure."}),
+      el("div",{class:"row",style:"margin-top:16px;justify-content:center"},[
+        el("button",{class:"btn pri",onclick:function(){ S.view="import"; render() }},["Go to import"]),
+        el("button",{class:"btn",onclick:loadExamples},["Load the examples"])
+      ])
+    ]));
+    return;
+  }
+  var list = visible();
+  if(S.idx >= list.length) S.idx = Math.max(0, list.length-1);
+  var t = list[S.idx];
+
+  m.appendChild(headerBlock("What went wrong here?",
+    "One question and answer at a time. Write what looks wrong in your own words. Do not sort into categories yet, that comes after about 30 traces."));
+
+  var bar = el("div",{class:"row",style:"margin-top:14px;justify-content:space-between"},[
+    el("div",{class:"row"},[
+      filterBtn("unreviewed","Not reviewed"), filterBtn("problems","Problems"),
+      filterBtn("unassigned","Unassigned"), filterBtn("all","All")
+    ]),
+    el("div",{class:"row"},[
+      el("span",{class:"pill",text: (S.idx+1) + " of " + list.length}),
+      el("span",{class:"pill ok",text: reviewed().length + " reviewed"}),
+      el("span",{class:"pill bad",text: problems().length + " problems"})
+    ])
+  ]);
+  m.appendChild(bar);
+
+  if(!t){
+    m.appendChild(el("div",{class:"empty"},[ el("h2",{text:"Nothing in this filter"}), el("p",{text:"Switch the filter above."}) ]));
+    return;
+  }
+
+  var card = el("div",{class:"card",style:"margin-top:16px"});
+  card.appendChild(el("div",{class:"meta"},[
+    el("span",{text:t.account||"unknown account"}), el("span",{class:"dot",text:"/"}),
+    el("span",{text:t.user||"unknown user"}), el("span",{class:"dot",text:"/"}),
+    el("span",{text:t.when||""}), t.session?el("span",{class:"dot",text:"/"}):null, t.session?el("span",{text:"session "+t.session}):null
+  ]));
+  card.appendChild(el("div",{class:"qa",style:"margin-top:12px"},[
+    el("div",{class:"q",text:t.q}),
+    el("div",{class:"a",text:t.a})
+  ]));
+  m.appendChild(card);
+
+  var note = el("textarea",{rows:"3",id:"noteBox",placeholder:"What is wrong with this answer? Plain words, no categories.",value:t.note||""});
+  note.addEventListener("input", function(){ t.note = note.value });
+  var save = el("div",{class:"card",style:"margin-top:14px"},[
+    el("div",{class:"lbl",style:"margin-bottom:8px",text:"Your note"}), note,
+    el("div",{class:"row",style:"margin-top:12px;justify-content:space-between"},[
+      el("div",{class:"row"},[
+        el("button",{class:"btn ok",onclick:function(){ mark(t,"ok") }},["Answer is fine"]),
+        el("button",{class:"btn bad",onclick:function(){ mark(t,"bad") }},["Something is wrong"]),
+        t.verdict ? el("span",{class:"pill "+(t.verdict==="bad"?"bad":"ok"),text:t.verdict==="bad"?"marked as a problem":"marked fine"}) : null
+      ]),
+      el("div",{class:"row"},[
+        el("button",{class:"btn sm",onclick:function(){ step(-1) }},["Previous"]),
+        el("button",{class:"btn sm",onclick:function(){ step(1) }},["Next"])
+      ])
+    ]),
+    el("p",{class:"note",style:"margin-top:10px"},[
+      "Keyboard: ", el("span",{class:"kbd",text:"1"}), " fine, ", el("span",{class:"kbd",text:"2"}), " problem, ",
+      el("span",{class:"kbd",text:"←"}), " ", el("span",{class:"kbd",text:"→"}), " move."
+    ])
+  ]);
+  m.appendChild(save);
+
+  if(S.cats.length && t.verdict === "bad"){
+    var chips = el("div",{class:"row",style:"margin-top:10px"});
+    S.cats.forEach(function(c){
+      chips.appendChild(el("button",{class:"catchip","aria-pressed": !!(t.cats&&t.cats[c.id]), onclick:function(){
+        t.cats = t.cats||{};
+        if(t.cats[c.id]) delete t.cats[c.id]; else t.cats[c.id]=true;
+        saveTrace(t); render();
+      }},[c.name]));
+    });
+    m.appendChild(el("div",{class:"card",style:"margin-top:14px"},[
+      el("div",{class:"lbl",style:"margin-bottom:4px",text:"Category"}), chips
+    ]));
+  }
+}
+function filterBtn(id,label){
+  return el("button",{class:"btn sm","aria-pressed":S.filter===id,style:S.filter===id?"border-color:var(--accent);color:var(--accent)":"",
+    onclick:function(){ S.filter=id; S.idx=0; render() }},[label]);
+}
+function mark(t, v){ t.verdict = v; saveTrace(t); step(1) }
+function step(d){
+  var list = visible();
+  var next = S.idx + d;
+  if(S.filter === "unreviewed" && d > 0) next = Math.min(S.idx, Math.max(0, list.length-1));
+  S.idx = Math.max(0, Math.min(Math.max(0,list.length-1), next));
+  render();
+  var nb = $("#noteBox"); if(nb) nb.focus();
+}
+document.addEventListener("keydown", function(e){
+  if(S.view !== "review") return;
+  var typing = /^(input|textarea|select)$/i.test((e.target.tagName||""));
+  if(e.key === "ArrowRight" && !typing){ step(1) }
+  else if(e.key === "ArrowLeft" && !typing){ step(-1) }
+  else if((e.key === "1" || e.key === "2") && !typing){
+    var t = visible()[S.idx]; if(t) mark(t, e.key === "1" ? "ok" : "bad");
+  }
+});
+
+/* ---- 3. categorize ---- */
+function viewCats(m){
+  var probs = problems();
+  m.appendChild(headerBlock("Group the problems",
+    "Turn your notes into a handful of failure categories, then count them. The biggest count is where the eval work starts."));
+
+  if(probs.length < 5){
+    m.appendChild(el("div",{class:"empty"},[
+      el("h2",{text:"Review more first"}),
+      el("p",{text:"You have "+probs.length+" problems noted. Categories built from fewer than about 30 reviews tend to miss things."}),
+      el("div",{style:"margin-top:16px"},[ el("button",{class:"btn pri",onclick:function(){ S.view="review"; render() }},["Back to review"]) ])
+    ]));
+    return;
+  }
+
+  var wrap = el("div",{class:"stack"}); m.appendChild(wrap);
+  var sugCard = el("div",{class:"card"},[
+    el("h3",{text:"Categories"}),
+    el("p",{class:"note",style:"margin:6px 0 12px",text:"Based on "+probs.length+" problem notes. Edit the names and definitions until they match how you think about the failures."})
+  ]);
+  var btnRow = el("div",{class:"row"},[
+    S.sample ? el("button",{class:"btn pri",id:"sugBtn",onclick:suggestCats},[S.cats.length?"Suggest again":"Suggest categories from my notes"]) : null,
+    el("button",{class:"btn",onclick:function(){
+      S.cats.push({id:"c"+Date.now().toString(36), name:"New category", def:""}); saveCats(); render();
+    }},["Add one by hand"])
+  ]);
+  sugCard.appendChild(btnRow);
+  if(S.busy) sugCard.appendChild(el("p",{class:"note",style:"margin-top:10px",text:S.busy}));
+  wrap.appendChild(sugCard);
+
+  if(S.cats.length){
+    var cards = el("div",{class:"stack",style:"margin-top:0"});
+    S.cats.forEach(function(c, i){
+      var name = el("input",{type:"text",value:c.name,onchange:function(e){ c.name=e.target.value; saveCats(); render() }});
+      var def = el("textarea",{rows:"2",value:c.def||"",onchange:function(e){ c.def=e.target.value; saveCats() }});
+      cards.appendChild(el("div",{class:"card"},[
+        el("div",{class:"row",style:"justify-content:space-between;align-items:flex-start"},[
+          el("div",{style:"flex:1;min-width:220px"},[
+            el("span",{class:"lbl",text:"Name"}), name,
+            el("div",{style:"height:8px"}), el("span",{class:"lbl",text:"When does this apply?"}), def
+          ]),
+          el("div",{class:"row",style:"align-items:center"},[
+            el("span",{class:"pill",text:catCount(c.id)+" traces"}),
+            el("button",{class:"btn sm",onclick:function(){
+              if(!confirmInline(this,"Delete?")) return;
+              S.traces.forEach(function(t){ if(t.cats&&t.cats[c.id]){ delete t.cats[c.id]; saveTrace(t) } });
+              S.cats.splice(i,1); saveCats(); render();
+            }},["Delete"])
+          ])
+        ])
+      ]));
+    });
+    wrap.appendChild(cards);
+
+    var counts = S.cats.map(function(c){ return {c:c, n:catCount(c.id)} }).sort(function(a,b){ return b.n-a.n });
+    var max = Math.max(1, counts[0].n);
+    var tbl = el("table");
+    tbl.appendChild(el("thead",{},[el("tr",{},[el("th",{text:"Category"}),el("th",{text:"Share of problems"}),el("th",{class:"n",text:"Traces"}),el("th",{text:""})])]));
+    var tb = el("tbody");
+    counts.forEach(function(r){
+      tb.appendChild(el("tr",{},[
+        el("td",{text:r.c.name}),
+        el("td",{},[ el("div",{class:"bartrack"},[ el("div",{class:"bar",style:"width:"+Math.round(r.n/max*100)+"%"}) ]) ]),
+        el("td",{class:"n",text:String(r.n)}),
+        el("td",{},[ el("button",{class:"btn sm",onclick:function(){ S.judgeCat=r.c.id; S.view="judge"; render() }},["Build a judge"]) ])
+      ]));
+    });
+    tbl.appendChild(tb);
+    wrap.appendChild(el("div",{class:"card"},[ el("h3",{text:"Priority"}), el("p",{class:"note",style:"margin:6px 0 12px",text:"Most frequent first. Frequency is not the whole story, but it is the honest starting point."}), el("div",{class:"scroll"},[tbl]) ]));
+
+    var unass = probs.filter(function(t){ return !Object.keys(t.cats||{}).length });
+    wrap.appendChild(el("div",{class:"card"},[
+      el("h3",{text:"Assign notes"}),
+      el("p",{class:"note",style:"margin:6px 0 12px",text: unass.length ? (unass.length+" problem notes have no category yet.") : "Every problem note has a category."}),
+      el("div",{class:"row"},[
+        el("button",{class:"btn",onclick:function(){ S.filter="unassigned"; S.idx=0; S.view="review"; render() }},["Assign them one by one"]),
+        (S.sample && unass.length) ? el("button",{class:"btn",onclick:suggestAssign},["Suggest assignments"]) : null
+      ])
+    ]));
+
+    if(S.suggestions && S.suggestions.length){
+      var sl = el("div",{class:"list"});
+      S.suggestions.forEach(function(s, i){
+        var t = S.traces.filter(function(x){ return x.id===s.id })[0];
+        var c = S.cats.filter(function(x){ return x.id===s.cat })[0];
+        if(!t || !c) return;
+        sl.appendChild(el("div",{class:"card"},[
+          el("p",{class:"note",text:(t.note||t.q).slice(0,180)}),
+          el("div",{class:"row",style:"margin-top:8px"},[
+            el("span",{class:"pill",text:"suggested: "+c.name}),
+            el("button",{class:"btn sm ok",onclick:function(){
+              t.cats = t.cats||{}; t.cats[c.id]=true; saveTrace(t);
+              S.suggestions.splice(i,1); render();
+            }},["Accept"]),
+            el("button",{class:"btn sm",onclick:function(){ S.suggestions.splice(i,1); render() }},["Reject"])
+          ])
+        ]));
+      });
+      wrap.appendChild(el("div",{class:"card"},[ el("h3",{text:"Suggested assignments"}), el("p",{class:"note",style:"margin:6px 0 12px",text:"Accept or reject each one. Nothing is applied until you accept it."}), sl ]));
+    }
+  }
+}
+function notesBlob(limit){
+  var probs = problems().filter(function(t){ return (t.note||"").trim() });
+  var out = [], used = 0;
+  for(var i=0;i<probs.length;i++){
+    var line = "[" + probs[i].id + "] note: " + probs[i].note + "\nquestion: " + probs[i].q.slice(0,180) + "\n";
+    if(used + line.length > limit) break;
+    out.push(line); used += line.length;
+  }
+  return out.join("\n");
+}
+function suggestCats(){
+  if(!S.sample) return;
+  S.busy = "Reading your notes..."; render();
+  var prompt = "These are a product manager's notes about failures in an AI chat assistant. "
+    + "Group them into 4 to 6 failure categories.\n\n"
+    + "Rules: each category describes ONE kind of failure that would need one kind of fix. Do not merge a data-accuracy failure with a tone or formatting failure. "
+    + "Use the manager's own words where possible. Keep names under 5 words.\n\n"
+    + "Reply with only a JSON array of objects like "
+    + '[{"name":"Totals from partial data","def":"The answer sums a truncated result set and presents it as a program total"}]'
+    + "\n\nNOTES:\n" + notesBlob(40000);
+  S.sample.json(prompt, {modelTier:"complex"}).then(function(arr){
+    if(!Array.isArray(arr)) throw {code:"invalid_json"};
+    S.cats = arr.slice(0,8).map(function(c,i){
+      return { id:"c"+Date.now().toString(36)+i, name:String(c.name||"Category "+(i+1)).slice(0,60), def:String(c.def||"").slice(0,400) };
+    });
+    S.busy = ""; saveCats(); render();
+  }).catch(function(e){
+    S.busy = ""; S.dbNote = sampleErr(e, "Could not suggest categories"); render();
+  });
+}
+function suggestAssign(){
+  if(!S.sample) return;
+  S.busy = "Matching notes to categories..."; render();
+  var cats = S.cats.map(function(c){ return c.id+" = "+c.name+(c.def?(" ("+c.def+")"):"") }).join("\n");
+  var items = problems().filter(function(t){ return !Object.keys(t.cats||{}).length }).slice(0,40)
+    .map(function(t){ return "["+t.id+"] "+(t.note||t.q).slice(0,220) }).join("\n");
+  var prompt = "Assign each note to exactly one category id, or to \"none\" if nothing fits.\n\nCATEGORIES:\n"+cats
+    + "\n\nNOTES:\n"+items
+    + '\n\nReply with only a JSON array like [{"id":"t3f2","cat":"c1"}]. Leave out anything you would mark none.';
+  S.sample.json(prompt, {modelTier:"default"}).then(function(arr){
+    S.suggestions = (Array.isArray(arr)?arr:[]).filter(function(s){ return s && s.id && s.cat });
+    S.busy = ""; render();
+  }).catch(function(e){ S.busy=""; S.dbNote = sampleErr(e,"Could not suggest assignments"); render() });
+}
+function sampleErr(e, what){
+  var c = e && e.code;
+  if(c === "not_granted" || c === "sampling_disabled") return what + ": Claude is not allowed for this page in this view.";
+  if(c === "rate_limited") return what + ": too many requests just now. Wait a moment and try again.";
+  if(c === "invalid_json") return what + ": the reply was not usable. Try again.";
+  return what + (c ? (" ("+c+")") : "") + ".";
+}
+
+/* ---- 4. judge ---- */
+function defaultPrompt(c){
+  return "You are checking one answer from an AI assistant.\n"
+   + "Check for ONE failure only.\n\n"
+   + "FAILURE: " + c.name + "\n"
+   + "DEFINITION: " + (c.def || "(describe the failure here)") + "\n\n"
+   + "Answer with only JSON: {\"verdict\":\"fail\",\"reason\":\"<8 words>\"}\n"
+   + "verdict is \"fail\" when this failure is present, \"pass\" when it is not, \"unknown\" when you cannot tell from what is shown.\n\n"
+   + "QUESTION:\n{{question}}\n\nANSWER:\n{{answer}}";
+}
+function viewJudge(m){
+  m.appendChild(headerBlock("Build a judge, then check it against yourself",
+    "Write the prompt that decides pass or fail for one failure. Run it on the traces you labelled and see where it disagrees with you."));
+  if(!S.cats.length){
+    m.appendChild(el("div",{class:"empty"},[ el("h2",{text:"No categories yet"}),
+      el("p",{text:"Group your problems first, then come back and pick the one to work on."}),
+      el("div",{style:"margin-top:16px"},[ el("button",{class:"btn pri",onclick:function(){ S.view="categorize"; render() }},["Go to categories"]) ])]));
+    return;
+  }
+  if(!S.judgeCat) S.judgeCat = S.cats.map(function(c){return {id:c.id,n:catCount(c.id)}}).sort(function(a,b){return b.n-a.n})[0].id;
+  var cat = S.cats.filter(function(c){ return c.id === S.judgeCat })[0];
+  if(!cat){ S.judgeCat = S.cats[0].id; cat = S.cats[0] }
+  var j = S.judges[cat.id] || { catId:cat.id, prompt:"", versions:[] };
+  if(!j.prompt) j.prompt = defaultPrompt(cat);
+  S.judges[cat.id] = j;
+
+  var wrap = el("div",{class:"stack"}); m.appendChild(wrap);
+
+  var pick = el("div",{class:"row"});
+  S.cats.forEach(function(c){
+    pick.appendChild(el("button",{class:"catchip","aria-pressed": c.id===S.judgeCat, onclick:function(){ S.judgeCat=c.id; S.judgeRun=null; render() }},
+      [c.name + " (" + catCount(c.id) + ")"]));
+  });
+  wrap.appendChild(el("div",{class:"card"},[ el("div",{class:"lbl",style:"margin-bottom:8px",text:"Which failure"}), pick ]));
+
+  var pt = el("textarea",{rows:"14",value:j.prompt||defaultPrompt(cat),onchange:function(e){ j.prompt = e.target.value; saveJudge(j) }});
+  var draftNote = el("p",{class:"note",style:"margin-top:8px",text:"{{question}} and {{answer}} are replaced with each trace. Keep the output strictly pass or fail."});
+  wrap.appendChild(el("div",{class:"card"},[
+    el("div",{class:"row",style:"justify-content:space-between;margin-bottom:8px"},[
+      el("h3",{text:"Judge prompt"}),
+      el("div",{class:"row"},[
+        el("button",{class:"btn sm",onclick:function(){ pt.value = defaultPrompt(cat); j.prompt = pt.value; saveJudge(j) }},["Reset to template"]),
+        S.sample ? el("button",{class:"btn sm pri",id:"draftBtn",onclick:function(){ draftPrompt(cat, j, pt, draftNote, this) }},["Draft with Claude"])
+                 : el("span",{class:"note",html:'Drafting needs the <a href="https://claude.ai/artifact/UBghVF4G8oD64QVVSQv3oZ" target="_blank" rel="noopener">hosted version</a>'})
+      ])
+    ]),
+    pt, draftNote
+  ]));
+
+  var pos = S.traces.filter(function(t){ return t.cats && t.cats[cat.id] });
+  var neg = S.traces.filter(function(t){ return t.verdict === "ok" }).slice(0, Math.max(10, pos.length));
+  wrap.appendChild(el("div",{class:"card"},[
+    el("h3",{text:"Your labelled set"}),
+    el("div",{class:"grid2",style:"margin-top:12px"},[
+      stat("Should fail", pos.length), stat("Should pass", neg.length)
+    ]),
+    el("p",{class:"note",style:"margin-top:10px",text: (pos.length<5||neg.length<5) ? "Thin. Label more traces for a number you can trust, but you can still run it to see the shape." : "Enough to see whether the judge agrees with you."}),
+    el("div",{class:"row",style:"margin-top:12px"},[
+      S.sample ? el("button",{class:"btn pri",disabled: !!S.abort, onclick:function(){ runJudge(cat, j, pos, neg) }},[S.abort?"Running...":"Run the judge"]) : el("span",{class:"note",html:'Running the judge needs the <a href="https://claude.ai/artifact/UBghVF4G8oD64QVVSQv3oZ" target="_blank" rel="noopener">hosted version</a>. Everything else works here.'}),
+      S.abort ? el("button",{class:"btn",onclick:function(){ S.abort.abort() }},["Stop"]) : null,
+      S.busy ? el("span",{class:"note",text:S.busy}) : null
+    ])
+  ]));
+
+  if(S.judgeRun && S.judgeRun.catId === cat.id) wrap.appendChild(resultsCard(cat, j));
+
+  if(j.versions && j.versions.length){
+    var vt = el("table");
+    vt.appendChild(el("thead",{},[el("tr",{},[el("th",{text:"Run"}),el("th",{class:"n",text:"Catches failures"}),el("th",{class:"n",text:"Passes good ones"}),el("th",{class:"n",text:"Checked"})])]));
+    var vb = el("tbody");
+    j.versions.slice().reverse().forEach(function(v,i){
+      vb.appendChild(el("tr",{},[
+        el("td",{text:new Date(v.at).toLocaleString()}),
+        el("td",{class:"n",text:pct(v.tpr)}), el("td",{class:"n",text:pct(v.tnr)}), el("td",{class:"n",text:String(v.n)})
+      ]));
+    });
+    vt.appendChild(vb);
+    wrap.appendChild(el("div",{class:"card"},[ el("h3",{text:"History"}), el("div",{class:"scroll",style:"margin-top:10px"},[vt]) ]));
+  }
+}
+function pct(x){ return (x===null||x===undefined||isNaN(x)) ? "n/a" : Math.round(x*100)+"%" }
+function draftPrompt(cat, j, ta, note, btn){
+  if(btn){ btn.disabled = true; btn.textContent = "Thinking..." }
+  if(note) note.textContent = "Claude is writing the judge prompt. This usually takes 10 to 40 seconds.";
+  var ex = S.traces.filter(function(t){ return t.cats && t.cats[cat.id] }).slice(0,4)
+    .map(function(t){ return "- note: "+(t.note||"")+"\n  question: "+t.q.slice(0,160) }).join("\n");
+  if(!ex) ex = "(none labelled yet)";
+  var p = "Write a prompt for an LLM judge that decides whether ONE specific failure is present in an answer from an AI assistant.\n\n"
+    + "FAILURE NAME: "+cat.name+"\nDEFINITION: "+(cat.def||"")+"\n\nReal examples the product manager marked as this failure:\n"+ex
+    + "\n\nThe prompt must: name the failure, say exactly what counts as fail and what counts as pass, allow \"unknown\" when the evidence is not visible, "
+    + "and end with the literal placeholders {{question}} and {{answer}}. It must require the reply to be only JSON: {\"verdict\":\"fail|pass|unknown\",\"reason\":\"<8 words>\"}.\n"
+    + "Reply with the prompt text only, no preamble.";
+  S.sample(p, {modelTier:"complex", onText:function(u){ ta.value = u.text }}).then(function(r){
+    j.prompt = r.text.trim(); ta.value = j.prompt; saveJudge(j);
+    if(btn){ btn.disabled = false; btn.textContent = "Draft again" }
+    if(note) note.textContent = "Drafted. Edit it as you like, then run it on your labelled traces below.";
+  }).catch(function(e){
+    if(btn){ btn.disabled = false; btn.textContent = "Draft with Claude" }
+    if(note) note.textContent = sampleErr(e, "Could not draft the prompt");
+  });
+}
+function runJudge(cat, j, pos, neg){
+  var items = pos.map(function(t){ return {t:t, expect:"fail"} }).concat(neg.map(function(t){ return {t:t, expect:"pass"} }));
+  if(!items.length){ S.dbNote = "Label some traces with this category first."; render(); return }
+  S.abort = new AbortController();
+  S.judgeRun = { catId:cat.id, rows:[], at:Date.now() };
+  S.busy = "0 of " + items.length; render();
+  queue(items, function(it){
+    var body = j.prompt.replace("{{question}}", it.t.q).replace("{{answer}}", it.t.a.slice(0, 6000));
+    return S.sample.json(body, {modelTier:"default", signal:S.abort.signal, cache:false}).then(function(r){
+      var v = String((r && r.verdict) || "unknown").toLowerCase();
+      S.judgeRun.rows.push({ id:it.t.id, expect:it.expect, got:(v==="fail"||v==="pass")?v:"unknown", why:String((r&&r.reason)||"").slice(0,120) });
+    }).catch(function(e){
+      if(e && e.code === "cancelled") return;
+      S.judgeRun.rows.push({ id:it.t.id, expect:it.expect, got:"error", why:(e&&e.code)||"error" });
+    });
+  }, 3, function(d,n){ S.busy = d + " of " + n; if(d % 3 === 0 || d === n) render(); }).then(function(){
+    S.busy = ""; S.abort = null;
+    var mtr = metrics(S.judgeRun.rows);
+    j.versions = (j.versions||[]).concat([{ at:Date.now(), tpr:mtr.tpr, tnr:mtr.tnr, n:S.judgeRun.rows.length, prompt:j.prompt }]).slice(-12);
+    saveJudge(j); render();
+  });
+}
+function metrics(rows){
+  var tp=0,fn=0,tn=0,fp=0,unk=0;
+  rows.forEach(function(r){
+    if(r.got === "unknown" || r.got === "error"){ unk++; return }
+    if(r.expect === "fail"){ r.got === "fail" ? tp++ : fn++ } else { r.got === "pass" ? tn++ : fp++ }
+  });
+  return { tp:tp, fn:fn, tn:tn, fp:fp, unk:unk,
+    tpr: (tp+fn) ? tp/(tp+fn) : null, tnr: (tn+fp) ? tn/(tn+fp) : null };
+}
+function resultsCard(cat, j){
+  var rows = S.judgeRun.rows, mt = metrics(rows);
+  var card = el("div",{class:"card"},[ el("h3",{text:"Does the judge agree with you?"}) ]);
+  card.appendChild(el("div",{class:"grid2",style:"margin:12px 0"},[
+    stat("Catches your failures", pct(mt.tpr)),
+    stat("Passes the good ones", pct(mt.tnr)),
+    stat("Checked", rows.length),
+    stat("Could not tell", mt.unk)
+  ]));
+  card.appendChild(el("div",{class:"matrix"},[
+    el("div",{class:"hd",text:""}), el("div",{class:"hd",text:"Judge says fail"}), el("div",{class:"hd",text:"Judge says pass"}),
+    el("div",{class:"hd",text:"You said fail"}), el("div",{class:"big",text:String(mt.tp)}), el("div",{class:"big",text:String(mt.fn)}),
+    el("div",{class:"hd",text:"You said fine"}), el("div",{class:"big",text:String(mt.fp)}), el("div",{class:"big",text:String(mt.tn)})
+  ]));
+  var dis = rows.filter(function(r){ return r.got !== "error" && ((r.expect==="fail" && r.got!=="fail") || (r.expect==="pass" && r.got!=="pass")) });
+  card.appendChild(el("p",{class:"note",style:"margin:14px 0 8px",text: dis.length ? (dis.length + " disagreements. Read them: either the prompt is unclear, or your own label was wrong.") : "No disagreements. Either the judge is good, or the labelled set is too easy."}));
+  var list = el("div",{class:"list"});
+  dis.slice(0,12).forEach(function(r){
+    var t = S.traces.filter(function(x){ return x.id===r.id })[0]; if(!t) return;
+    list.appendChild(el("div",{class:"card disagree"},[
+      el("div",{class:"row",style:"justify-content:space-between"},[
+        el("span",{class:"pill warn",text:"you: "+(r.expect==="fail"?"failure":"fine")+" / judge: "+r.got}),
+        el("span",{class:"note",text:r.why})
+      ]),
+      el("p",{style:"margin-top:8px;font-weight:500",text:t.q.slice(0,160)}),
+      el("p",{class:"note",style:"margin-top:4px",text:(t.note||"(no note)").slice(0,200)}),
+      el("div",{class:"row",style:"margin-top:8px"},[
+        el("button",{class:"btn sm",onclick:function(){
+          if(r.expect === "fail"){ delete t.cats[cat.id]; t.verdict = "ok" } else { t.cats = t.cats||{}; t.cats[cat.id]=true; t.verdict="bad" }
+          saveTrace(t); render();
+        }},["My label was wrong"]),
+        el("button",{class:"btn sm",onclick:function(){ S.view="judge"; render(); window.scrollTo(0,0) }},["Prompt needs work"])
+      ])
+    ]));
+  });
+  card.appendChild(list);
+  return card;
+}
+
+/* ---- 5. handover ---- */
+function viewExport(m){
+  m.appendChild(headerBlock("Hand it to the developer",
+    "What was found, how often, and the judge that detects it. Download the pack or copy it into the work item."));
+  var counts = S.cats.map(function(c){ return {c:c,n:catCount(c.id)} }).sort(function(a,b){ return b.n-a.n });
+  var wrap = el("div",{class:"stack"}); m.appendChild(wrap);
+  wrap.appendChild(el("div",{class:"card"},[
+    el("h3",{text:"This batch"}),
+    el("div",{class:"grid2",style:"margin-top:12px"},[
+      stat("Traces reviewed", reviewed().length),
+      stat("Problems found", problems().length),
+      stat("Failure rate", reviewed().length ? Math.round(problems().length/reviewed().length*100)+"%" : "n/a"),
+      stat("Categories", S.cats.length)
+    ])
+  ]));
+  if(counts.length){
+    var t = el("table");
+    t.appendChild(el("thead",{},[el("tr",{},[el("th",{text:"Failure"}),el("th",{class:"n",text:"Traces"}),el("th",{text:"Judge checked?"})])]));
+    var tb = el("tbody");
+    counts.forEach(function(r){
+      var j = S.judges[r.c.id], v = j && j.versions && j.versions[j.versions.length-1];
+      tb.appendChild(el("tr",{},[
+        el("td",{},[ el("div",{text:r.c.name}), el("div",{class:"note",text:r.c.def||""}) ]),
+        el("td",{class:"n",text:String(r.n)}),
+        el("td",{text: v ? ("catches "+pct(v.tpr)+", passes "+pct(v.tnr)) : "not yet" })
+      ]));
+    });
+    t.appendChild(tb);
+    wrap.appendChild(el("div",{class:"card"},[ el("h3",{text:"Failures by frequency"}), el("div",{class:"scroll",style:"margin-top:10px"},[t]) ]));
+  }
+  var pack = buildPack();
+  var box = el("textarea",{rows:"12",value:pack,readonly:true});
+  wrap.appendChild(el("div",{class:"card"},[
+    el("h3",{text:"Handover pack"}),
+    el("p",{class:"note",style:"margin:6px 0 10px",text:"Plain text. Paste into the work item, or download it with the labelled data."}),
+    box,
+    el("div",{class:"row",style:"margin-top:12px"},[
+      el("button",{class:"btn",onclick:function(){
+        var b=this; navigator.clipboard.writeText(pack).then(function(){ b.textContent="Copied" },function(){ box.select(); b.textContent="Select and copy" });
+      }},["Copy"]),
+      S.dl ? el("button",{class:"btn pri",onclick:function(){
+        S.dl.save({filename:"chat-failures-"+new Date().toISOString().slice(0,10)+".md", data:pack}).catch(function(){});
+      }},["Download the pack"]) : null,
+      S.dl ? el("button",{class:"btn",onclick:function(){
+        S.dl.save({filename:"chat-labels-"+new Date().toISOString().slice(0,10)+".csv", data:buildCsv()}).catch(function(){});
+      }},["Download labelled traces"]) : null
+    ])
+  ]));
+}
+function buildPack(){
+  var L = [];
+  L.push("# AI chat failure review");
+  L.push("");
+  L.push("Reviewed: " + reviewed().length + " traces. Problems: " + problems().length + ".");
+  L.push("");
+  var counts = S.cats.map(function(c){ return {c:c,n:catCount(c.id)} }).sort(function(a,b){ return b.n-a.n });
+  counts.forEach(function(r, i){
+    L.push("## " + (i+1) + ". " + r.c.name + "  (" + r.n + " traces)");
+    if(r.c.def) L.push(r.c.def);
+    L.push("");
+    S.traces.filter(function(t){ return t.cats && t.cats[r.c.id] }).slice(0,3).forEach(function(t){
+      L.push("Example (" + (t.account||"account") + ", " + (t.when||"") + ")");
+      L.push("Question: " + t.q.slice(0,200));
+      L.push("PM note: " + (t.note||""));
+      L.push("Answer extract: " + t.a.slice(0,400).replace(/\n+/g," ") + "...");
+      L.push("");
+    });
+    var j = S.judges[r.c.id], v = j && j.versions && j.versions[j.versions.length-1];
+    if(v){
+      L.push("Judge: catches " + pct(v.tpr) + " of this failure, passes " + pct(v.tnr) + " of good answers, checked on " + v.n + " labelled traces.");
+      L.push("");
+      L.push("```");
+      L.push(j.prompt);
+      L.push("```");
+      L.push("");
+    }
+  });
+  return L.join("\n");
+}
+function buildCsv(){
+  var rows = [["id","account","user","date","verdict","categories","note","question","answer"]];
+  S.traces.forEach(function(t){
+    rows.push([t.id, t.account, t.user, t.when, t.verdict,
+      Object.keys(t.cats||{}).map(function(id){ var c=S.cats.filter(function(x){return x.id===id})[0]; return c?c.name:id }).join("; "),
+      t.note, t.q, t.a]);
+  });
+  return rows.map(function(r){ return r.map(function(v){ return '"' + String(v==null?"":v).replace(/"/g,'""') + '"' }).join(",") }).join("\n");
+}
+
+/* ---------- boot ---------- */
+restore();
+render();
+if(window.claude && window.claude.use){
+  window.claude.use("sample").then(function(s){ if(s){ S.sample = s; render() } });
+  window.claude.use("downloads").then(function(d){ if(d){ S.dl = d; render() } });
+}
+})();
+</script>
